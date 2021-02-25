@@ -1,2 +1,3 @@
-# doc
-documentation
+# Doc
+
+Documentations of our design and schedules.
