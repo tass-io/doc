@@ -14,6 +14,20 @@
 
 考虑到稳定性，采用 v2.3.1。
 
+Kubebuilder 的简单使用：
+
+1. 创建一个新的 crd：
+
+   ```bash
+   $ kubebuilder create api --group serverless --version v1alpha1 --kind Sample
+   ```
+
+   它会创建一个 `apiVersion` 为 `serverless.tass.io/v1alpha1` ，`kind` 为 `Sample` 的 crd；
+
+2. 每次对 crd 定义文件（形如 `xxx_types.go`）的更新都需要 `make install`；
+
+3. 启动 controller 的命令为 `make run`。
+
 目前已收集到的可能对于开发 Kubebuilder 有帮助的教程：
 
 * 官方 Cronjob Tutorial：[EN](https://book.kubebuilder.io/cronjob-tutorial/cronjob-tutorial.html) & [CH](https://cloudnative.to/kubebuilder/cronjob-tutorial/cronjob-tutorial.html)
@@ -27,7 +41,9 @@
 
 ### Workflow Definition
 
+> 会在字段定义相对稳定后更新。
+
 ### Function Definition
 
-
+> 会在字段定义相对稳定后更新。
 
