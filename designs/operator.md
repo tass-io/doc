@@ -1,10 +1,37 @@
-# Tass Design
+# Tass Operator Design
 
 
 
 | Components | Features                                                     | Data Structures                                              | Remarks |
 | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------- |
 | Operator   | 1. 负责业务流程的定义，负责函数的定义；<br>2. 知识共享；<br>3. Controller；<br>4. HTTP Triger。 | 1. Function / Workflow 数据结构；<br>2. 分支跳转的数据和知识利用率相关数据 |         |
+
+## Core Concepts
+
+在 Kubernetes 集群中，主要有三种类型的 CRD 会通过 Tass Operator 进行管理：
+
+* `Function` CRD：Function 用来定义 Tass 中最小的执行单位，在 Tass 中，每个用户可以定义多个 Function，这些 Function 就是一段代码片段，Tass 会在一些合适的时间点执行这些代码。多个不同的 Function 可以组成一个 Workflow；
+* `Workflow` CRD：Workflow 是多个 Function 逻辑的组合，它不仅描述了 Function 链式调用，同时还描述了一些循环，switch 的情况。
+* `WorkflowRuntime` CRD：WorkflowRuntime 是 Workflow 的实际执行，当用户创建了一个 Workflow Resource 的时候，Tass 会自动创建一个对应的 WorkflowRuntime。Workflowruntime 用来真正管理 Workflow 实例。
+
+可以通过以下几个图具体描述上述三个 CRD 各个之间的关系，下图展示了 Function 和 Workflow 之间的关系：
+
+<img src="img/Fn & WFcreate-fn.png" alt="Fn & WFcreate-fn" style="zoom:33%;" />
+
+1. 一个用户可以定义多个 Function，每个 Function 在这个用户下通过 name 唯一标识；
+2. 一个用户可以定义多个 Workflow，每个 Workflow 由其定义的 Function 组成：
+   1. 一个 Function 可以被多个 Workflow 使用；
+   2. 一个 Function 可以在一个 Workflow 下多次使用；
+   3. 一个 Workflow 中 的 Function 在处理完数据后会涉及几种情况，选择，循环，或直接往下游发送。
+
+下图展示了 Workflow 和 WorkflowRuntime 之间的关系：
+
+<img src="img/Wf & Wfrtcreate-fn.png" alt="Wf & Wfrtcreate-fn" style="zoom:33%;" />
+
+1. 一个 Workflow 是各个 Function 逻辑上的集合；一个 WorkflowRuntime 是这个 Workflow 的运行时；
+2. 当一个 Workflow Resource 被创建的时候，会对应创建一个 WorkflowRuntime Resource；
+3. 当一个 WorkflowRuntime Resource 创建的时候，会对应创建一个 Deployment Resource；
+4. WorkflowRuntime Resource 记录着该 Workflow 运行时的各种资源信息，比如每个 Pod 的状态，Function 的状态等。
 
 ## CRD Types
 
