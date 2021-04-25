@@ -8,6 +8,8 @@
 
 ## Core Concepts
 
+### Main CRD
+
 在 Kubernetes 集群中，主要有三种类型的 CRD 会通过 Tass Operator 进行管理：
 
 * `Function` CRD：Function 用来定义 Tass 中最小的执行单位，在 Tass 中，每个用户可以定义多个 Function，这些 Function 就是一段代码片段，Tass 会在一些合适的时间点执行这些代码。多个不同的 Function 可以组成一个 Workflow；
@@ -32,6 +34,48 @@
 2. 当一个 Workflow Resource 被创建的时候，会对应创建一个 WorkflowRuntime Resource；
 3. 当一个 WorkflowRuntime Resource 创建的时候，会对应创建一个 Deployment Resource；
 4. WorkflowRuntime Resource 记录着该 Workflow 运行时的各种资源信息，比如每个 Pod 的状态，Function 的状态等。
+
+### Sample
+
+下面将介绍当创建一个类型为 `Workflow` 的资源时集群发生的变化。
+
+首先，假设创建的资源配置文件如下：
+
+```yaml
+apiVersion: serverless.tass.io/v1alpha1
+kind: Workflow
+metadata:
+  name: workflow-sample
+spec:
+  spec: # todo：补一个具体的 function
+```
+
+目前，tass 使用 Kubernetes Namespace 区别用户，因此，上述文件的用户为 default。该文件表明，当前定义的 `Workflow` 的名字为 `workflow-sample`，其关系可以用下图表示：
+
+> Todo：补一个图
+
+当用户在集群中创建这个资源后，Tass Operator 会**按序**创建相关资源 WorkflowRuntime 和 Deployment，如下图：
+
+<img src="img/creation-process.png" alt="creation-process" style="zoom:33%;" />
+
+Workflow，WorkflowRuntime 和 Deployment 创建的资源具有相同的名字和 namespace，只是他们各自扮演的角色并不相同：
+
+* Workflow 可以理解为一份配置文件，是 Workflow resource 的 metadata，记录着 Function 构成的图；
+* WorkflowRuntime 是 Workflow 资源的运行时，在 Workflow Resource 创建完成后创建，它负责记录两件事：
+  * 真正要部署的 Deployment 副本数量和资源限制，如运行 2 个 Pod，每个 Pod 资源占用 1 个 CPU 2GB 的内存；
+  * 真正在集群中运行的 Pod 的各类信息，如 Pod 的创建时间，Pod 的 IP，Pod 中运行的 Function 的信息；
+* Deployment 用来真正进行资源部署，在 WorkflowRuntime Resource 创建完成后创建，它根据 WorkflowRuntime 的信息动态的调整 Pod 的数量；
+* Tass 具有资源池的概念，每个 Workflow 创建的时候都会预启动对应的资源池，这保证了更低的冷启动。
+
+对于每一个运行的 Pod，其内部有一个 Local Scheduler 的进程负责启动 Function Process 和上报资源信息，假设一个 `workflow-sample` 相关的 HTTP 请求发往 Tass，这条请求会通过 Tass 转发到一个具体的 Pod 下，Pod 下的 Local Scheduler  就会启动 Workflow 下的相关 Function 的进程，并将状态上报给对应的 WorkflowRuntime Resource，此时集群可能的状态如下图：
+
+<img src="img/Status.png" alt="Status" style="zoom:33%;" />
+
+
+
+
+
+
 
 ## CRD Types
 
