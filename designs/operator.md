@@ -93,3 +93,36 @@ Kubebuilder 的简单使用：
 * [kubebuilder 2.0 学习笔记——进阶使用](https://segmentfault.com/a/1190000020359577)：包括 finalizer、Controller 对 CRD 的 update status、kubebuilder 注释等；
 * 其他一些在 Github 上的 Sample：[jetstack](https://github.com/jetstack)/**[kubebuilder-sample-controller](https://github.com/jetstack/kubebuilder-sample-controller)**，[ishankhare07](https://github.com/ishankhare07)/**[kubebuilder-controller](https://github.com/ishankhare07/kubebuilder-controller)** 和对应的[文章](https://dev.to/ishankhare07/writing-a-simple-kubernetes-controller-in-go-with-kubebuilder-ib8)；[tkestack](https://github.com/tkestack)/**[elastic-jupyter-operator](https://github.com/tkestack/elastic-jupyter-operator)**。
 
+### Communicate with Kubernetes
+
+#### Controller-runtime
+
+在以往的方法中，通常使用 code-gen 来生成一个 crd 对应的 CRUD 代码，然后通过调包更新 resource，在 controller-runtime 的包加入后，可以使用 controller-runtime 中的 [client](https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/client#Client) 统一的进行各类资源的修改（比如，[create](https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/client#example-Client-Create)），只需要在初始化这个 client 时注册对应类型的 scheme。比如，如果想获取一个自定义的 Function CRD 的相关代码如下：
+
+```go
+package main
+
+import (
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	serverlessv1alpha1 "github.com/tass-io/tass-operator/api/v1alpha1"
+
+)
+
+func main() {
+  var c *client.Client
+  scheme := runtime.NewScheme()
+  serverlessv1alpha1.AddToScheme(scheme)
+  cl, _ := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
+  
+  fn := *serverlessv1alpha1.Function{}
+  cl.Get(context.Background(), client.ObjectKey{
+		Namespace: "default",
+		Name:      "hello",
+	}, fn)
+}
+```
+
+
+
