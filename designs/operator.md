@@ -47,14 +47,10 @@ kind: Workflow
 metadata:
   name: workflow-sample
 spec:
-  spec: # todo：补一个具体的 function
+  spec: # 某几个的 function
 ```
 
-目前，tass 使用 Kubernetes Namespace 区别用户，因此，上述文件的用户为 default。该文件表明，当前定义的 `Workflow` 的名字为 `workflow-sample`，其关系可以用下图表示：
-
-> Todo：补一个图
-
-当用户在集群中创建这个资源后，Tass Operator 会**按序**创建相关资源 WorkflowRuntime 和 Deployment，如下图：
+目前，tass 使用 Kubernetes Namespace 区别用户，因此，上述文件的用户为 default。该文件表明，当前定义的 `Workflow` 的名字为 `workflow-sample`。当用户在集群中创建这个资源后，Tass Operator 会**按序**创建相关资源 WorkflowRuntime 和 Deployment，如下图：
 
 <img src="img/creation-process.png" alt="creation-process" style="zoom:33%;" />
 
@@ -71,17 +67,130 @@ Workflow，WorkflowRuntime 和 Deployment 创建的资源具有相同的名字�
 
 <img src="img/Status.png" alt="Status" style="zoom:33%;" />
 
-
-
-
-
-
-
 ## CRD Types
 
 ### Workflow Definition
 
-> 会在字段定义相对稳定后更新。
+#### `WorkflowSpec`
+
+| Field       | Type          | Description                                                  |
+| ----------- | ------------- | ------------------------------------------------------------ |
+| Environment | `Environment` | Environment represents the language environment of the code segments |
+| Spec        | `[]Flow`      | Spec is a list of Flows                                      |
+
+#### `Environment`
+
+```go
+// Environment defines the language environments that tass supports
+type Environment string
+
+const (
+	// Golang means the language environment is Golang
+	Golang Environment = "Golang"
+	// Python means the language environment is Python
+	Python Environment = "Python"
+	// JavaScript means the language environment is JavaScript
+	JavaScript Environment = "JavaScript"
+)
+```
+
+#### `Flow`
+
+| Field     | Type         | Description                                                  | Required |
+| --------- | ------------ | ------------------------------------------------------------ | -------- |
+| Name      | `string`     | Name is the name of the flow which is unique in a workflow.  | True     |
+| Function  | `Function`   | Function is the function name which has been defined in Tass | True     |
+| Inputs    | `[]string`   | Inputs specify which flows need to complete before this flow can start | False    |
+| Outputs   | `[]string`   | Outputs specify where the result of this flow should go      | False    |
+| Statement | `Statement`  | Statement shows the flow control logic type                  | True     |
+| Condition | `*Condition` | Condition is the control logic of the flow, only worked when the Statement is 'Switch' or 'Loop' | False    |
+
+#### `Statement`
+
+```go
+// Statement shows the flow control logic type
+type Statement string
+
+const (
+	// Direct is the result of the flow go to downstream directly
+	Direct Statement = "direct"
+	// Switch is the result of the flow go to downstream based on the switch condition;
+	Switch Statement = "switch"
+	// Loop is the result of the flow go back to itself until the loop condition break;
+	Loop Statement = "loop"
+)
+```
+
+#### `Condition`
+
+| Field       | Type            | Description                                                  |
+| ----------- | --------------- | ------------------------------------------------------------ |
+| Type        | `ConditionType` | Type is the data type that Tass workflow condition support   |
+| Operator    | `OperatorType`  | Operator defines the illegal operation in workflow condition statement |
+| Comparision | `Comparision`   | Comparision is used to compare with the flow result          |
+| Destination | `Destination`   | Destination defines the downstream Flows based on the condition result |
+
+#### `ConditionType`
+
+```go
+// ConditionType is the data type that Tass workflow condition support
+type ConditionType string
+
+const (
+	// String means the condition type is string
+	String ConditionType = "string"
+	// Int means the condition type is int
+	Int ConditionType = "int"
+	// Bool means the condition type is boolean
+	Bool ConditionType = "bool"
+)
+```
+
+#### `OperatorType`
+
+```go
+// OperatorType defines the illegal operation in workflow condition statement
+type OperatorType string
+
+const (
+	// Eq means the result is equal to the target
+	Eq OperatorType = "eq"
+	// Ne means the result is not equal to the target
+	Ne OperatorType = "ne"
+	// Lt means the result is less than the target, bool not accept
+	Lt OperatorType = "lt"
+	// Le means the result is less than or equal to the target, bool not accept
+	Le OperatorType = "le"
+	// Gt means the result is greater than the target, bool not accept
+	Gt OperatorType = "gt"
+	// Ge means the result is greater than or equal to the target, bool not accept
+	Ge OperatorType = "ge"
+)
+```
+
+#### `Comparision`
+
+```go
+// Comparision is used to compare with the flow result
+// Comparision can be string, int or bool
+// TODO: Validation needed
+type Comparision string
+```
+
+#### `Destination`
+
+| Field   | Type       | Description                                                  |
+| ------- | ---------- | ------------------------------------------------------------ |
+| IsTrue  | `[]string` | IsTrue defines the downstream Flows if the condition is satisfied |
+| IsFalse | `[]string` | IsFalse defines the downstream Flows if the condition is not satisfied |
+
+#### Sample
+
+一个 Workflow 的示例如下，该文件完整定义见[此](https://raw.githubusercontent.com/tass-io/tass-operator/main/config/samples/serverless_v1alpha1_workflow.yaml)：
+
+![](img/workflow-sample.png)
+
+
 
 ### Function Definition
 
