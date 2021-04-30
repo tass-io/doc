@@ -196,7 +196,7 @@ type Comparision string
 
 > 会在字段定义相对稳定后更新。
 
-### WorkflowRUntime Definition
+### WorkflowRuntime Definition
 
 > 会在字段定义相对稳定后更新。
 
