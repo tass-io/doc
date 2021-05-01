@@ -41,7 +41,7 @@ HTTPServer：负责对外提供 workflow 的统一服务，接收南北流量和
 
 FunctionScheduler 负责全权管理和使用本地函数进程，并且同步本 LocalScheduler 信息进行全局共享。FunctionScheduler 将管理函数的完整生命周期，这里借鉴了很多 Docker 的代码。
 
-创建函数实例：使用`exec.Command`创建函数，创建同时创建 2 个 unnamed pipe 并给到函数实例(书p56)，在 cmd 启动后获取 process pid，创建`/tmp/tass/{pid}` 文件夹并将代码拷贝进入`/tmp/tass/{pid}/code`
+创建函数实例：使用`exec.Command`创建函数，创建同时创建 2 个 unnamed pipe 并给到函数实例(书p56)，在 cmd 启动后并非直接进入函数实例的进程，而是进入`scheduler init`, InitCmd 获取 process pid，创建`/tmp/tass/{pid}` 文件夹并将代码拷贝进入`/tmp/tass/{pid}/code`，并进行一些其他的初始化工作，最后执行 `syscall.Exec`。
 
 初始化函数实例：函数实例初始化 pipe 的reader 和 writer，各语言的不同方式从 /tmp/tass/{pid}/code load 代码。
 
@@ -53,3 +53,42 @@ FunctionScheduler 负责全权管理和使用本地函数进程，并且同步�
 
 负责更新本 LocalScheduler 的 `WorkflowRuntime` 并 watch 其他 LocalScheduler 对应的 `WorkflowRuntime`，该资源将描述 LocalScheduler 的 uuid，拥有函数的情况，LSDS 也实现 Runner 接口，协助远程调用，跟 K8S 相关的内容都会存在与该系统中。
 
+### Extension
+#### Scale
+FunctionScheduler 更多的是一些能力的实现，这些能力的调用将被抽象以保证后续试验的简便实施和改装，因此决定 FunctionScheduler as strategy。Policy 方面通过可扩展的方式实现。
+
+Local Scheduler 计划实现 Middleware 和 EventHandler 分别作为同步和异步处理的两种支持方式，两种实现都在 Manager 的概念中完成。
+
+![function-instance-create](./images/function-caller-flow.png)
+上图从一次 Local Scheduler 接受请求的角度描述处理流程，Middleware 和 EventHandler 两个部分实际是会内置一些实现，这些实现就是 strategy 的部分，例如 Middleware 中会植入使用 LSDS 完成调用的情况。Middleware 使用priority table 以确定执行的先后顺序，通过描述切入点以支持在请求前和请求后进行处理。
+
+Event System 部分以 InvokeEventHandler 为例，他将收集调用的 qps，以计算自己认为合理的函数实例数量，从而向 ScheduleEventHandler 发出 Event。Event Handler 的 Event 来源非常广泛，可以来自 HTTP request， 可以来自外部的请求，因此可扩展能力很强。
+
+ScheduleEventHandler 是一个特殊的 EventHandler 它特殊就特殊在他是所有的Event 的下游，并最终调用 FunctionScheduler 的相关接口。
+
+ScheduleEventHandler 对每个函数都有一个 priority table，各上游状态意见和 priority table 以确定最终意见。
+
+例如现在有如下的 priority table：
+```json
+{
+    "invoke": 1,
+    "memory": 2,
+}
+```
+并且同时存在如下的上游状态意见：
+```json
+{
+    "invoke": {"trend": "increase", "function": "a", "num": 2},
+    "memory": {"trend": "decrease", "function": "a", "num": 1}
+}
+```
+因为 `invoke` 的优先级高，最终 a 函数实例的最终期望为2，当然也保证最大包容原则：
+```json
+{
+    "invoke": {"trend": "increase", "function": "a", "num": 1},
+    "memory": {"trend": "increase", "function": "a", "num": 2}
+}
+```
+此时虽然 `invoke` 优先级更高，但是它与 `memory` 是一个可兼容向，因此此时a函数实例的最终期望为 2
+
+FunctionScheduler schedule 实例的接口的输入一定是期望值，而非绝对值。
