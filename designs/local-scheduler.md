@@ -14,7 +14,7 @@ HTTPServer：负责对外提供 workflow 的统一服务，接收南北流量和
 
 
 
-![architecture](./images/arch.png)
+![architecture](./img/arch.png)
 
 ## Execute Path
 
@@ -29,15 +29,15 @@ HTTPServer：负责对外提供 workflow 的统一服务，接收南北流量和
 
 1. Pod 获取 HTTP Request，请求某个 workflow
 2. WorkflowController 处理请求，查询相关 workflow 的内容，创建上下文，调用 FunctionScheduler 开始执行代码
-3. FunctionScheduler 因为资源不足，没有办法在本地创建进程处理，调用其子模块 LSDS 的函数调用接口
-4. LSDS 将会找寻合适 LocalScheduler 调用其 HTTP Server，完成函数调用。
+3. FunctionScheduler 因为资源不足，没有办法在本地创建进程处理，调用其子模块 LSDS 的流程调用接口
+4. LSDS 将会找寻合适 LocalScheduler 调用其 HTTP Server，完成流程调用。
 5. 逐步返回回到 WorkflowController，继续 WorkflowController 的流程执行。
 
 ## Component Intro
 
 ### FunctionScheduler
 
-![function-instance-create](./images/function-interaction.png)
+![function-instance-create](./img/function-interaction.png)
 
 FunctionScheduler 负责全权管理和使用本地函数进程，并且同步本 LocalScheduler 信息进行全局共享。FunctionScheduler 将管理函数的完整生命周期，这里借鉴了很多 Docker 的代码。
 
@@ -59,7 +59,7 @@ FunctionScheduler 更多的是一些能力的实现，这些能力的调用将�
 
 Local Scheduler 计划实现 Middleware 和 EventHandler 分别作为同步和异步处理的两种支持方式，两种实现都在 Manager 的概念中完成。
 
-![function-instance-create](./images/function-caller-flow.png)
+![function-instance-create](./img/function-caller-flow.png)
 上图从一次 Local Scheduler 接受请求的角度描述处理流程，Middleware 和 EventHandler 两个部分实际是会内置一些实现，这些实现就是 strategy 的部分，例如 Middleware 中会植入使用 LSDS 完成调用的情况。Middleware 使用priority table 以确定执行的先后顺序，通过描述切入点以支持在请求前和请求后进行处理。
 
 Event System 部分以 InvokeEventHandler 为例，他将收集调用的 qps，以计算自己认为合理的函数实例数量，从而向 ScheduleEventHandler 发出 Event。Event Handler 的 Event 来源非常广泛，可以来自 HTTP request， 可以来自外部的请求，因此可扩展能力很强。
