@@ -73,37 +73,21 @@ Workflow，WorkflowRuntime 和 Deployment 创建的资源具有相同的名字�
 
 #### `WorkflowSpec`
 
-| Field       | Type          | Description                                                  |
-| ----------- | ------------- | ------------------------------------------------------------ |
-| Environment | `Environment` | Environment represents the language environment of the code segments |
-| Spec        | `[]Flow`      | Spec is a list of Flows                                      |
-
-#### `Environment`
-
-```go
-// Environment defines the language environments that tass supports
-type Environment string
-
-const (
-	// Golang means the language environment is Golang
-	Golang Environment = "Golang"
-	// Python means the language environment is Python
-	Python Environment = "Python"
-	// JavaScript means the language environment is JavaScript
-	JavaScript Environment = "JavaScript"
-)
-```
+| Field | Type     | Description                                                  |
+| ----- | -------- | ------------------------------------------------------------ |
+| Spec  | `[]Flow` | Spec is a list of Flows                                      |
+| Env   | `Env`    | Env is the environment variables for the Workflow which is defined by users |
 
 #### `Flow`
 
-| Field     | Type         | Description                                                  | Required |
-| --------- | ------------ | ------------------------------------------------------------ | -------- |
-| Name      | `string`     | Name is the name of the flow which is unique in a workflow.  | True     |
-| Function  | `Function`   | Function is the function name which has been defined in Tass | True     |
-| Inputs    | `[]string`   | Inputs specify which flows need to complete before this flow can start | False    |
-| Outputs   | `[]string`   | Outputs specify where the result of this flow should go      | False    |
-| Statement | `Statement`  | Statement shows the flow control logic type                  | True     |
-| Condition | `*Condition` | Condition is the control logic of the flow, only worked when the Statement is 'Switch' or 'Loop' | False    |
+| Field      | Type           | Description                                                  | Required |
+| ---------- | -------------- | ------------------------------------------------------------ | -------- |
+| Name       | `string`       | Name is the name of the flow which is unique in a workflow.  | True     |
+| Function   | `Function`     | Function is the function name which has been defined in Tass | True     |
+| Outputs    | `[]string`     | Outputs specify where the result of this flow should go      | False    |
+| Statement  | `Statement`    | Statement shows the flow control logic type                  | True     |
+| Role       | `ROle`         | Role is the role of the Flow                                 |          |
+| Conditions | `[]*Condition` | Conditions are the control logic group of the flow. The first element of the Conditions is the root control logic | False    |
 
 #### `Statement`
 
@@ -116,8 +100,24 @@ const (
 	Direct Statement = "direct"
 	// Switch is the result of the flow go to downstream based on the switch condition;
 	Switch Statement = "switch"
-	// Loop is the result of the flow go back to itself until the loop condition break;
-	Loop Statement = "loop"
+)
+```
+
+#### `Role`
+
+```go
+// Role is the role of the Flow
+// +kubebuilder:validation:Enum=start;end
+type Role string
+
+const (
+	// Start means the role of the Flow is "start" which means it is the entrance of workflow instance
+	Start Role = "start"
+	// End means the role of the Flow is "end" which means it is the exit point of workflow instance
+	End Role = "end"
+	// Orphan means the role of the Flow is "orphan" which is a special case that
+	// the workflow instance has only one function
+	Orphan Role = "orphan"
 )
 ```
 
@@ -125,8 +125,10 @@ const (
 
 | Field       | Type            | Description                                                  |
 | ----------- | --------------- | ------------------------------------------------------------ |
+| Nmae        | `string`        | Name is the name of a Condition, it's unique in a Condition group |
 | Type        | `ConditionType` | Type is the data type that Tass workflow condition support   |
 | Operator    | `OperatorType`  | Operator defines the illegal operation in workflow condition statement |
+| Target      | `string`        | Target shows the specific data that the flow result uses to compare with. The result of the flow can be a simple type like string, bool or int. But it can also be a complex object contains some fileds. Whatever the result is, the Flow runtime will wrap the result to a JSON object to unifiy the transmission process. |
 | Comparision | `Comparision`   | Comparision is used to compare with the flow result          |
 | Destination | `Destination`   | Destination defines the downstream Flows based on the condition result |
 
@@ -179,10 +181,17 @@ type Comparision string
 
 #### `Destination`
 
-| Field   | Type       | Description                                                  |
-| ------- | ---------- | ------------------------------------------------------------ |
-| IsTrue  | `[]string` | IsTrue defines the downstream Flows if the condition is satisfied |
-| IsFalse | `[]string` | IsFalse defines the downstream Flows if the condition is not satisfied |
+| Field   | Type   | Description                                                  |
+| ------- | ------ | ------------------------------------------------------------ |
+| IsTrue  | `Next` | IsTrue defines the downstream Flows if the condition is satisfied |
+| IsFalse | `Next` | IsFalse defines the downstream Flows if the condition is not satisfied |
+
+#### `Next`
+
+| Field      | Type           | Description                                                  |
+| ---------- | -------------- | ------------------------------------------------------------ |
+| Flows      | `[]string`     | Flows lists the Flows where the result of the current Flow goes |
+| Conditions | `[]*Condition` | Condition lists the Condition where the result of the current Flow goes. It means that the result needs more control logic check |
 
 #### Sample
 
@@ -190,11 +199,40 @@ type Comparision string
 
 ![](img/workflow-sample.png)
 
-
-
 ### Function Definition
 
-> 会在字段定义相对稳定后更新。
+#### `FunctionSpec`
+
+| Field       | Type          | Description                                                  |
+| ----------- | ------------- | ------------------------------------------------------------ |
+| Environment | `Environment` | Environment represents the language environment of the code segments, the scheduler wil then launch the corresponding language environment |
+| Resource    | `Resource`    | Resource claims the resource provisioning for Function process, it now contains cpu and memory. |
+
+#### `Environment`
+
+```go
+// Environment defines the language environments that tass supports
+type Environment string
+
+const (
+	// Golang means the language environment is Golang
+	Golang Environment = "Golang"
+	// Python means the language environment is Python
+	Python Environment = "Python"
+	// JavaScript means the language environment is JavaScript
+	JavaScript Environment = "JavaScript"
+)
+```
+
+#### `Resource`
+
+```go
+// Resource claims the resource provisioning for Function process
+type Resource struct {
+	Cpu    string `json:"cpu"`
+  Memory string `json:"memory"`
+}
+```
 
 ### WorkflowRuntime Definition
 
