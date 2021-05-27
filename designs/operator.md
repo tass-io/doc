@@ -279,9 +279,21 @@ Kubebuilder 的简单使用：
   * 中文版和原文比有几处小出入，建议搭配原文；
   * 原文根据代码自动生成，可以直接参考官方 repo 示例中的代码（注意将分支调整为 v2）；
   * 已知该 Tutorial 安装 CRD 时会遇到的问题：[CronJob make install failed](https://github.com/kubernetes-sigs/kubebuilder/issues/1466)；
+  
 * [深入解析 Kubebuilder](https://juejin.cn/post/6844903952241131534)：介绍了 Kubebuilder 关键组件的作用；
+
 * [熟悉又陌生的 k8s 字段：finalizers](https://developer.aliyun.com/article/772044)：Finalizers 的使用介绍；
+
 * [kubebuilder 2.0 学习笔记——进阶使用](https://segmentfault.com/a/1190000020359577)：包括 finalizer、Controller 对 CRD 的 update status、kubebuilder 注释等；
+
+* [Kubebilder Resource Management](https://github.com/kubernetes-sigs/kubebuilder/pull/2000/files): 包括由 manager 本身创建的资源的 watch 和对外部资源创建的 watch；
+
+* K8S Patch：
+
+  * [K8S client-go Patch example](https://developer.aliyun.com/article/703438)
+
+  * [jsonpatch.com](http://jsonpatch.com/)
+
 * 其他一些在 Github 上的 Sample：[jetstack](https://github.com/jetstack)/**[kubebuilder-sample-controller](https://github.com/jetstack/kubebuilder-sample-controller)**，[ishankhare07](https://github.com/ishankhare07)/**[kubebuilder-controller](https://github.com/ishankhare07/kubebuilder-controller)** 和对应的[文章](https://dev.to/ishankhare07/writing-a-simple-kubernetes-controller-in-go-with-kubebuilder-ib8)；[tkestack](https://github.com/tkestack)/**[elastic-jupyter-operator](https://github.com/tkestack/elastic-jupyter-operator)**。
 
 ### Communicate with Kubernetes
